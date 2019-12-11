@@ -1,0 +1,144 @@
+---
+title: "Untitled"
+author: "Zach"
+date: "December 10, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+ 
+library(readxl)
+Rice_GO_Cellular_component <- read_excel("C:/Users/HPP15/Desktop/BCB546X/Rice_GO_Cellular_component.xlsx")
+Rice_GO_Molecular_function <- read_excel("C:/Users/HP15/Desktop/BCB546X/Rice_GO_Molecular_function.xlsx", sheet = "Sheet1", col_types = c("text","text", "text", "blank", "blank","blank"))
+Rice_GO_Biological_process <- read_excel("C:/Users/HP15/Desktop/BCB546X/Rice_GO_Biological_process.xlsx")
+old_arab_GO <- read.delim("C:/Users/HP15/Desktop/BCB546X/old_arab_GO.txt", header=FALSE)
+
+Rice_GO_C <- table(Rice_GO_Cellular_component$`GO_term`, Rice_GO_Cellular_component$cellular_component)
+Rice_GO_MF <- table(Rice_GO_Molecular_function$`GO_term`, Rice_GO_Molecular_function$molecular_function)
+Rice_GO_BP <- table(Rice_GO_Biological_process$`GO_term`, Rice_GO_Biological_process$Biological_process)
+
+ar <- table(old_arab_GO$`V4`, old_arab_GO$'V7', old_arab_GO$V6)
+
+
+library(tidyverse)
+library(reshape2)
+
+RICE_GOC <- melt(Rice_GO_C, id.vars = c("GO_term")) #To group variables by GO_term
+RICE_GOMF <- melt(Rice_GO_MF, id.vars = c("GO_term")) 
+RICE_GOBP <- melt(Rice_GO_BP, id.vars = c("GO_term")) 
+meltar <- melt(ar, id.vars = c("V4"))
+
+
+RICE_GO <- as_tibble(RICE_GOC)  #Count unique variables in column var2
+RICE_GOM <- as_tibble(RICE_GOMF)  
+RICE_GOB <- as_tibble(RICE_GOBP)  
+meltedar <- as_tibble(meltar)
+
+RICE_GOCagregate <- aggregate(RICE_GOC$value, by=list(var2=RICE_GOC$Var2), FUN=sum) #Total of each unique variable in var2
+RICE_GOCagregateMF <- aggregate(RICE_GOMF$value, by=list(var2=RICE_GOMF$Var2), FUN=sum)
+RICE_GOCagregateBP <- aggregate(RICE_GOBP$value, by=list(var2=RICE_GOBP$Var2), FUN=sum)
+meltedagregate <- aggregate(meltedar$value, by=list(Var2=meltedar$Var2), FUN=sum)
+
+SortedBy_Function <- meltedagregate[ c(6,11,12,16,21,27), ] #Sort unique factors individually
+SortedBy_Process <- meltedagregate[ c(5,7,17,24,28,29,30), ]
+SortedBy_localisation <- meltedagregate[ c(2,3,4,9,10,13,15,20,22,23,25,26,31), ]
+
+sum(RICE_GOCagregate$x) # Sum of varaibles in column x= 17465
+sum(RICE_GOCagregateMF$x)
+sum(RICE_GOCagregateBP$x)
+
+RICE_GOCagregate$percent <- (RICE_GOCagregate$x /17465 ) * 100 # Calculate the percentage of each row based on column x Total
+RICE_GOCagregateMF$percent <- (RICE_GOCagregateMF$x /sum(RICE_GOCagregateMF$x)) * 100
+RICE_GOCagregateBP$percent <- (RICE_GOCagregateBP$x /sum(RICE_GOCagregateBP$x)) * 100
+
+SortedBy_localisation$percent <- (SortedBy_localisation$x /sum(SortedBy_localisation$x)) * 100
+SortedBy_Function$percent <- (SortedBy_Function$x /sum(SortedBy_Function$x)) * 100
+SortedBy_Process$percent <- (SortedBy_Process$x  /sum(SorteedBy_Process$x)) * 100
+
+#Rename columns of arabidopsis files
+
+SortedBy_localisationF<- SortedBy_localisation %>% rename(Cell_component = Var2,Percent = percent)
+SortedBy_ProcessF<- SortedBy_Process %>% rename(Biological_Process = Var2,Percent = percent)
+SortedBy_FunctionF<- SortedBy_Function %>% rename(Biolgical_Function = Var2,Percent = percent)
+
+#code for printing piechart
+
+library(scales)
+
+install.packages("plotly")
+library(plotly)
+
+View(RICE_GOCagregate)# To check if i have all the columns
+MY_RICE_GOCagregate <- as_tibble(RICE_GOCagregate)
+MY_RICE_GOCagregate
+MY_RICE_GOCagregateMF <- as_tibble(RICE_GOCagregateMF)
+MY_RICE_GOCagregateBP <- as_tibble(RICE_GOCagregateBP)
+
+MY_RICE_GOCagregateF <- MY_RICE_GOCagregate[, c('var2', 'percent')]
+MY_RICE_GOCagregateFMF <- MY_RICE_GOCagregateMF[, c('var2', 'percent')]
+MY_RICE_GOCagregateFBP <- MY_RICE_GOCagregateBP[, c('var2', 'percent')]
+
+p5 <- plot_ly(MY_RICE_GOCagregateF, labels = ~var2, values = ~percent, type = 'pie',textposition = 'inside',textinfo = 'label+percent',insidetextfont = list(color = '#FFFFFF'),hoverinfo = 'text',text = ~paste('$', percent, ' billions'),     marker = list(colors = colors,line = list(color = '#FFFFFF', width = 1)),showlegend = FALSE) %>%layout(title = 'Rice GO_terms by localisation',xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+p5
+
+p5MF <- plot_ly(MY_RICE_GOCagregateFMF, labels = ~var2, values = ~percent, type = 'pie',textposition = 'inside',textinfo = 'label+percent',insidetextfont = list(color = '#FFFFFF'),hoverinfo = 'text',text = ~paste('$', percent, ' billions'),     marker = list(colors = colors,line = list(color = '#FFFFFF', width = 1)),showlegend = FALSE) %>%layout(title = 'Rice GO_terms by molecular function',xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+p5MF
+
+p5BP <- plot_ly(MY_RICE_GOCagregateFBP, labels = ~var2, values = ~percent, type = 'pie',textposition = 'inside',textinfo = 'label+percent',insidetextfont = list(color = '#FFFFFF'),hoverinfo = 'text',text = ~paste('$', percent, ' billions'),     marker = list(colors = colors,line = list(color = '#FFFFFF', width = 1)),showlegend = FALSE) %>%layout(title = 'Rice GO_terms by Biological process',xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+p5BP
+
+#Pie charts for arabidopsis
+p5LOC <- plot_ly(SortedBy_localisationF, labels = ~Cell_component, values = ~Percent, type = 'pie',textposition = 'inside',textinfo = 'label+Percent',insidetextfont = list(color = '#FFFFFF'),hoverinfo = 'text',text = ~paste('$', Percent, ' billions'),     marker = list(colors = colors,line = list(color = '#FFFFFF', width = 1)),showlegend = FALSE) %>%layout(title = 'Arabidopsis GO_terms by localisation',xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+p5LOC
+
+p5FUNC <- plot_ly(SortedBy_FunctionF, labels = ~Biolgical_Function, values = ~Percent, type = 'pie',textposition = 'inside',textinfo = 'label+Percent',insidetextfont = list(color = '#FFFFFF'),hoverinfo = 'text',text = ~paste('$', Percent, ' billions'),     marker = list(colors = colors,line = list(color = '#FFFFFF', width = 1)),showlegend = FALSE) %>%layout(title = 'Arabidopsis GO_terms Biological Function',xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+p5FUNC
+
+p5BIOLP <- plot_ly(SortedBy_ProcessF, labels = ~Biological_Process, values = ~Percent, type = 'pie',textposition = 'inside',textinfo = 'label+Percent',insidetextfont = list(color = '#FFFFFF'),hoverinfo = 'text',text = ~paste('$', Percent, ' billions'),     marker = list(colors = colors,line = list(color = '#FFFFFF', width = 1)),showlegend = FALSE) %>%layout(title = 'Arabidopsis GO_terms by Biological Process',xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+p5BIOLP
+
+# For producing barcharts
+
+p <- ggplot(data = MY_RICE_GOCagregateF, aes(x = var2, y = percent))
+p <- p + geom_bar(stat = "identity", width = 0.5, position = "dodge")
+p <- p + theme_bw()
+p <- p + theme(axis.text.x = element_text(angle = 90))
+p
+p
+pMF <- ggplot(data = MY_RICE_GOCagregateFMF, aes(x = var2, y = percent))
+pMF <- pMF + geom_bar(stat = "identity", width = 0.5, position = "dodge")
+pMF <- pMF + theme_bw()
+pMF <- pMF + theme(axis.text.x = element_text(angle = 90))
+pMF
+
+pBP <- ggplot(data = MY_RICE_GOCagregateFBP, aes(x = var2, y = percent))
+pBP <- pBP + geom_bar(stat = "identity", width = 0.5, position = "dodge")
+pBP <- pBP + theme_bw()
+pBP <- pBP + theme(axis.text.x = element_text(angle = 90))
+pB
+```
+
+p5LOC <- plot_ly(SortedBy_localisationF, labels = ~Cell_component, values = ~Percent, type = 'pie',textposition = 'inside',textinfo = 'label+percent',insidetextfont = list(color = '#FFFFFF'),hoverinfo = 'text',text = ~paste('$', percent, ' billions'),     marker = list(colors = colors,line = list(color = '#FFFFFF', width = 1)),showlegend = FALSE) %>%layout(title = 'Rice GO_terms by localisation',xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+p5LOC
+
+P
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
